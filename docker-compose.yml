@@ -1,0 +1,26 @@
+services:
+  trust-service:
+    build: .
+    ports:
+      - "8083:8083"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/trustdb
+      DB_USERNAME: trust
+      DB_PASSWORD: trust
+      JWT_SECRET: local-dev-secret-change-me-local-dev-secret
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: trustdb
+      POSTGRES_USER: trust
+      POSTGRES_PASSWORD: trust
+    ports:
+      - "5434:5432"
+    volumes:
+      - trust_pg_data:/var/lib/postgresql/data
+
+volumes:
+  trust_pg_data:

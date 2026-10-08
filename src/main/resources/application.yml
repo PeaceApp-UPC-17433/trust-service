@@ -1,0 +1,39 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: trust-service
+
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:trustdb;DB_CLOSE_DELAY=-1}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+trust:
+  jwt:
+    # Debe coincidir con identity.jwt.secret de identity-service hasta que el
+    # API Gateway (TS-04) centralice la validacion de tokens (CA-04).
+    secret: ${JWT_SECRET:dev-only-secret-change-me-dev-only-secret-change-me}
+  duplicate:
+    radius-meters: ${DUPLICATE_RADIUS_METERS:100}
+    window-minutes: ${DUPLICATE_WINDOW_MINUTES:30}
+  moderation:
+    falseness-threshold: ${FALSENESS_THRESHOLD:0.6}
+  appeal:
+    window-days: ${APPEAL_WINDOW_DAYS:7}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true

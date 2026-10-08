@@ -1,0 +1,32 @@
+package pe.upc.peaceapp.trust.security;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+
+/**
+ * Verifica tokens emitidos por identity-service. Sustituto temporal de la
+ * propagacion de claims por el API Gateway (CA-04) mientras TS-04 no exista.
+ */
+@Service
+public class JwtClaimsVerifier {
+
+    private final SecretKey signingKey;
+
+    public JwtClaimsVerifier(@Value("${trust.jwt.secret}") String secret) {
+        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public Claims parseClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(signingKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+}
