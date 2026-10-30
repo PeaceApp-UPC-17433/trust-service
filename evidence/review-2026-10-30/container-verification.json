@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-30",
+  "environment": "local Docker Desktop, Java 21, PostgreSQL 16 Alpine",
+  "service": "trust-service",
+  "uid": 100,
+  "health": {
+    "status": "UP",
+    "groups": [
+      "liveness",
+      "readiness"
+    ]
+  },
+  "container_health": "healthy",
+  "elapsed_seconds": 45,
+  "source": "working tree submitted in this pull request"
+}

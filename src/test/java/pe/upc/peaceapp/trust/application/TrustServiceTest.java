@@ -114,4 +114,80 @@ class TrustServiceTest {
         assertThatThrownBy(() -> service.appeal(UUID.randomUUID(), authorId, "no fue asi"))
                 .isInstanceOf(AppealWindowClosedException.class);
     }
+
+    private TrustCase rejectedCase(UUID author) {
+        TrustCase value = new TrustCase(UUID.randomUUID(), author, "ROBO", -12.05, -77.03, Instant.now());
+        value.setStatus(TrustStatus.REJECTED);
+        value.setDecidedAt(Instant.now().minusSeconds(60));
+        return value;
+    }
+
+    @Test
+    void approvalChangesStatusAndPersistsDecision() {
+        TrustCase value = rejectedCase(UUID.randomUUID());
+        value.setStatus(TrustStatus.HELD_FOR_MODERATION);
+        when(trustCaseRepository.findById(any())).thenReturn(Optional.of(value));
+        when(trustCaseRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        assertThat(newTrustService().decide(UUID.randomUUID(), UUID.randomUUID(), ModerationDecision.Decision.APPROVE, "validado").getStatus())
+                .isEqualTo(TrustStatus.APPROVED);
+        org.mockito.Mockito.verify(moderationDecisionRepository).save(any());
+        assertThat(value.getDecidedAt()).isNotNull();
+    }
+
+    @Test
+    void rejectionChangesStatus() {
+        TrustCase value = rejectedCase(UUID.randomUUID());
+        value.setStatus(TrustStatus.HELD_FOR_MODERATION);
+        when(trustCaseRepository.findById(any())).thenReturn(Optional.of(value));
+        when(trustCaseRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        assertThat(newTrustService().decide(UUID.randomUUID(), UUID.randomUUID(), ModerationDecision.Decision.REJECT, "sin sustento").getStatus())
+                .isEqualTo(TrustStatus.REJECTED);
+    }
+
+    @Test
+    void timelyAppealReopensModerationAndPersistsJustification() {
+        UUID author = UUID.randomUUID();
+        TrustCase value = rejectedCase(author);
+        when(trustCaseRepository.findById(any())).thenReturn(Optional.of(value));
+        when(appealRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        var appeal = newTrustService().appeal(UUID.randomUUID(), author, "adjunto evidencia");
+        assertThat(value.getStatus()).isEqualTo(TrustStatus.HELD_FOR_MODERATION);
+        assertThat(appeal.getAuthorId()).isEqualTo(author);
+        assertThat(appeal.getJustification()).isEqualTo("adjunto evidencia");
+        org.mockito.Mockito.verify(trustCaseRepository).save(value);
+    }
+
+    @Test
+    void appealRejectsAnotherAuthorWithoutWriting() {
+        when(trustCaseRepository.findById(any())).thenReturn(Optional.of(rejectedCase(UUID.randomUUID())));
+        assertThatThrownBy(() -> newTrustService().appeal(UUID.randomUUID(), UUID.randomUUID(), "motivo"))
+                .isInstanceOf(pe.upc.peaceapp.trust.api.error.ForbiddenOperationException.class);
+        org.mockito.Mockito.verifyNoInteractions(appealRepository);
+        org.mockito.Mockito.verify(trustCaseRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void appealRequiresRejectedState() {
+        UUID author=UUID.randomUUID();
+        TrustCase value=rejectedCase(author);
+        value.setStatus(TrustStatus.APPROVED);
+        when(trustCaseRepository.findById(any())).thenReturn(Optional.of(value));
+        assertThatThrownBy(() -> newTrustService().appeal(UUID.randomUUID(), author, "motivo"))
+                .isInstanceOf(InvalidModerationStateException.class);
+    }
+
+    @Test
+    void missingCaseIsReported() {
+        when(trustCaseRepository.findById(any())).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> newTrustService().getById(UUID.randomUUID()))
+                .isInstanceOf(pe.upc.peaceapp.trust.api.error.TrustCaseNotFoundException.class);
+    }
+
+    @Test
+    void queueContainsOnlyCasesAwaitingModeration() {
+        TrustCase value=rejectedCase(UUID.randomUUID());
+        value.setStatus(TrustStatus.HELD_FOR_MODERATION);
+        when(trustCaseRepository.findByStatus(TrustStatus.HELD_FOR_MODERATION)).thenReturn(List.of(value));
+        assertThat(newTrustService().getModerationQueue()).containsExactly(value);
+    }
 }
