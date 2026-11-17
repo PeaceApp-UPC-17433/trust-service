@@ -13,7 +13,7 @@
 
   <groupId>pe.upc.peaceapp</groupId>
   <artifactId>trust-service</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.3.0-SNAPSHOT</version>
   <name>trust-service</name>
   <description>PeaceApp - BC-03 Trust &amp; Moderation (duplicados, reportes falsos, moderacion y apelaciones)</description>
 
