@@ -1,0 +1,11 @@
+title = "PeaceApp trust-service"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Falsos positivos documentados en el informe (seccion 3.7.2)"
+paths = [
+  '''evidence/.*\.log''',
+  '''src/test/.*''',
+]
