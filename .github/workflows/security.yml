@@ -1,0 +1,100 @@
+name: DevSecOps security scans
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  TRIVY_IMAGE: aquasec/trivy:0.58.1
+
+jobs:
+  sast:
+    name: SAST (Semgrep) - bloquea ERROR
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Semgrep
+        run: |
+          python3 -m pip install --quiet semgrep
+          semgrep scan --config p/java --config p/owasp-top-ten --metrics=off \
+            --severity ERROR --error \
+            --json-output=semgrep-report.json --text --output semgrep-report.txt src
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sast-semgrep
+          path: semgrep-report.*
+          retention-days: 30
+
+  sca:
+    name: SCA (Trivy fs) - bloquea CRITICAL
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reporte HIGH y CRITICAL
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work $TRIVY_IMAGE fs \
+            --scanners vuln --severity HIGH,CRITICAL --format table \
+            --output trivy-fs-report.txt .
+          cat trivy-fs-report.txt
+      - name: Umbral de bloqueo (CRITICAL)
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work $TRIVY_IMAGE fs \
+            --scanners vuln --severity CRITICAL --ignorefile .trivyignore --exit-code 1 .
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sca-trivy-fs
+          path: trivy-fs-report.txt
+          retention-days: 30
+
+  secrets:
+    name: Secretos (Gitleaks) - bloquea cualquier hallazgo
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz | tar -xz gitleaks
+          ./gitleaks detect --source . --config .gitleaks.toml --redact \
+            --report-format json --report-path gitleaks-report.json --exit-code 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: secrets-gitleaks
+          path: gitleaks-report.json
+          retention-days: 30
+
+  image:
+    name: Imagen (Trivy image) - bloquea CRITICAL
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t scan-target:ci .
+      - name: Reporte HIGH y CRITICAL
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/work" $TRIVY_IMAGE image \
+            --severity HIGH,CRITICAL --format table --output /work/trivy-image-report.txt scan-target:ci
+          cat trivy-image-report.txt
+      - name: Umbral de bloqueo (CRITICAL con correccion disponible)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/work" $TRIVY_IMAGE image \
+            --severity CRITICAL --ignore-unfixed --ignorefile /work/.trivyignore --exit-code 1 scan-target:ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: image-trivy
+          path: trivy-image-report.txt
+          retention-days: 30
