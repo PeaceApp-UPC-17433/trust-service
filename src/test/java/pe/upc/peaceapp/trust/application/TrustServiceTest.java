@@ -34,6 +34,8 @@ class TrustServiceTest {
     private static final long APPEAL_WINDOW_DAYS = 7;
 
     @Mock
+    private pe.upc.peaceapp.trust.messaging.IntegrationEventPublisher events;
+    @Mock
     private TrustCaseRepository trustCaseRepository;
     @Mock
     private ModerationDecisionRepository moderationDecisionRepository;
@@ -41,7 +43,7 @@ class TrustServiceTest {
     private AppealRepository appealRepository;
 
     private TrustService newTrustService() {
-        return new TrustService(trustCaseRepository, moderationDecisionRepository, appealRepository,
+        return new TrustService(trustCaseRepository, moderationDecisionRepository, appealRepository, events,
                 RADIUS_METERS, WINDOW_MINUTES, FALSENESS_THRESHOLD, APPEAL_WINDOW_DAYS);
     }
 

@@ -1,25 +1,48 @@
 server:
   port: 8083
+  shutdown: graceful
 
 spring:
+  mvc:
+    problemdetails:
+      enabled: true
   application:
     name: trust-service
-
+  profiles:
+    default: local
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
   datasource:
-    url: ${DB_URL:jdbc:h2:mem:trustdb;DB_CLOSE_DELAY=-1}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
-
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   jpa:
-    hibernate:
-      ddl-auto: update
     open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  rabbitmq:
+    host: ${RABBIT_HOST}
+    port: ${RABBIT_PORT:5672}
+    username: ${RABBIT_USER}
+    password: ${RABBIT_PASSWORD}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2
 
 trust:
-  jwt:
-    # Debe coincidir con identity.jwt.secret de identity-service hasta que el
-    # API Gateway (TS-04) centralice la validacion de tokens (CA-04).
-    secret: ${JWT_SECRET:dev-only-secret-change-me-dev-only-secret-change-me}
+  messaging:
+    exchange: ${EVENTS_EXCHANGE:peaceapp.events}
+  outbox:
+    poll-interval-ms: ${OUTBOX_POLL_MS:1000}
   duplicate:
     radius-meters: ${DUPLICATE_RADIUS_METERS:100}
     window-minutes: ${DUPLICATE_WINDOW_MINUTES:30}
@@ -29,11 +52,18 @@ trust:
     window-days: ${APPEAL_WINDOW_DAYS:7}
 
 management:
+  metrics:
+    tags:
+      application: ${spring.application.name}
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
   endpoint:
     health:
       probes:
         enabled: true
+
+logging:
+  pattern:
+    level: "%5p [%X{requestId:-},%X{userId:-}]"

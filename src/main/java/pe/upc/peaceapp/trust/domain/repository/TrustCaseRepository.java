@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface TrustCaseRepository extends JpaRepository<TrustCase, UUID> {
     List<TrustCase> findByTypeAndOccurredAtAfter(String type, Instant after);
     List<TrustCase> findByStatus(TrustStatus status);
+    java.util.Optional<TrustCase> findByIncidentId(UUID incidentId);
 }

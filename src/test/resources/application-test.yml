@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:trusttest;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false
+  rabbitmq:
+    host: localhost
+    username: test
+    password: test
+    listener:
+      simple:
+        auto-startup: false
+
+trust:
+  outbox:
+    enabled: false

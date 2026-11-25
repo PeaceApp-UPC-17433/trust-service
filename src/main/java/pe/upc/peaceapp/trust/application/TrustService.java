@@ -13,8 +13,12 @@ import pe.upc.peaceapp.trust.domain.repository.AppealRepository;
 import pe.upc.peaceapp.trust.domain.repository.ModerationDecisionRepository;
 import pe.upc.peaceapp.trust.domain.repository.TrustCaseRepository;
 
+import pe.upc.peaceapp.trust.messaging.IntegrationEventPublisher;
+
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /** BC-03 Trust & Moderation: US-14 a US-17. */
@@ -24,6 +28,7 @@ public class TrustService {
     private final TrustCaseRepository trustCaseRepository;
     private final ModerationDecisionRepository moderationDecisionRepository;
     private final AppealRepository appealRepository;
+    private final IntegrationEventPublisher events;
     private final double duplicateRadiusMeters;
     private final long duplicateWindowMinutes;
     private final double falsenessThreshold;
@@ -32,6 +37,7 @@ public class TrustService {
     public TrustService(TrustCaseRepository trustCaseRepository,
                          ModerationDecisionRepository moderationDecisionRepository,
                          AppealRepository appealRepository,
+                         IntegrationEventPublisher events,
                          @Value("${trust.duplicate.radius-meters}") double duplicateRadiusMeters,
                          @Value("${trust.duplicate.window-minutes}") long duplicateWindowMinutes,
                          @Value("${trust.moderation.falseness-threshold}") double falsenessThreshold,
@@ -39,6 +45,7 @@ public class TrustService {
         this.trustCaseRepository = trustCaseRepository;
         this.moderationDecisionRepository = moderationDecisionRepository;
         this.appealRepository = appealRepository;
+        this.events = events;
         this.duplicateRadiusMeters = duplicateRadiusMeters;
         this.duplicateWindowMinutes = duplicateWindowMinutes;
         this.falsenessThreshold = falsenessThreshold;
@@ -72,7 +79,23 @@ public class TrustService {
         double score = falsenessScore(request);
         trustCase.setFalsenessScore(score);
         trustCase.setStatus(score >= falsenessThreshold ? TrustStatus.HELD_FOR_MODERATION : TrustStatus.CLEARED);
-        return trustCaseRepository.save(trustCase);
+        TrustCase saved = trustCaseRepository.save(trustCase);
+        if (saved.getStatus() == TrustStatus.HELD_FOR_MODERATION) publishStatus("trust.incident-held", saved);
+        return saved;
+    }
+
+    @Transactional
+    public Optional<TrustCase> evaluateOnce(EvaluateIncidentRequest request) {
+        if (trustCaseRepository.findByIncidentId(request.incidentId()).isPresent()) return Optional.empty();
+        return Optional.of(evaluate(request));
+    }
+
+    private void publishStatus(String routingKey, TrustCase trustCase) {
+        var event = new LinkedHashMap<String, Object>();
+        event.put("eventId", java.util.UUID.randomUUID());
+        event.put("occurredAt", Instant.now().toString());
+        event.put("incidentId", trustCase.getIncidentId());
+        events.publish(routingKey, event);
     }
 
     /**
@@ -115,7 +138,9 @@ public class TrustService {
         trustCase.setStatus(decision == ModerationDecision.Decision.APPROVE
                 ? TrustStatus.APPROVED : TrustStatus.REJECTED);
         trustCase.setDecidedAt(Instant.now());
-        return trustCaseRepository.save(trustCase);
+        TrustCase saved = trustCaseRepository.save(trustCase);
+        publishStatus(decision == ModerationDecision.Decision.APPROVE ? "trust.incident-approved" : "trust.incident-rejected", saved);
+        return saved;
     }
 
     /** US-17: apelacion del autor dentro de los 7 dias siguientes al rechazo. */
@@ -136,6 +161,7 @@ public class TrustService {
 
         trustCase.setStatus(TrustStatus.HELD_FOR_MODERATION);
         trustCaseRepository.save(trustCase);
+        publishStatus("trust.incident-held", trustCase);
         return appealRepository.save(new Appeal(trustCase, requesterId, justification));
     }
 }
