@@ -19,6 +19,12 @@
 
   <properties>
     <java.version>21</java.version>
+    <jackson-bom.version>2.21.9</jackson-bom.version>
+    <tomcat.version>10.1.62</tomcat.version>
+    <postgresql.version>42.7.15</postgresql.version>
+    <rabbit-amqp-client.version>5.38.0</rabbit-amqp-client.version>
+    <netty.version>4.1.141.Final</netty.version>
+    <bouncycastle.version>1.87</bouncycastle.version>
   </properties>
 
   <dependencies>
