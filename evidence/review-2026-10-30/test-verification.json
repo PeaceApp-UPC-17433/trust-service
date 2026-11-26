@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-30",
+  "service": "trust-service",
+  "command": "mvn -B -ntp clean verify (Java 21)",
+  "tests": 13,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "source_sha256": "00000a2da22cf6531abef22273fed934fd6d4124687daf88762ea2d21f085b76",
+  "coverage_all_classes": {
+    "instruction": {
+      "covered": 631,
+      "missed": 222,
+      "percent": 73.97
+    },
+    "branch": {
+      "covered": 25,
+      "missed": 9,
+      "percent": 73.53
+    },
+    "line": {
+      "covered": 132,
+      "missed": 49,
+      "percent": 72.93
+    }
+  },
+  "coverage_application_package": {
+    "instruction": {
+      "covered": 361,
+      "missed": 3,
+      "percent": 99.18
+    },
+    "branch": {
+      "covered": 25,
+      "missed": 5,
+      "percent": 83.33
+    },
+    "line": {
+      "covered": 66,
+      "missed": 0,
+      "percent": 100.0
+    }
+  },
+  "gate": "70% LINE coverage of the application package only; full report includes every class",
+  "suites": [
+    {
+      "name": "pe.upc.peaceapp.trust.application.TrustServiceTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "appealFailsWhenWindowExpired",
+        "appealRequiresRejectedState",
+        "evaluateHoldsForModerationWhenFalsenessScoreIsHigh",
+        "evaluateClearsWellSupportedReport",
+        "rejectionChangesStatus",
+        "appealRejectsAnotherAuthorWithoutWriting",
+        "timelyAppealReopensModerationAndPersistsJustification",
+        "missingCaseIsReported",
+        "approvalChangesStatusAndPersistsDecision",
+        "evaluateMarksAsDuplicateWhenCloseInSpaceAndTime",
+        "queueContainsOnlyCasesAwaitingModeration",
+        "decideFailsWhenCaseIsNotInModerationQueue"
+      ]
+    },
+    {
+      "name": "pe.upc.peaceapp.trust.TrustServiceApplicationTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "contextLoads"
+      ]
+    }
+  ]
+}

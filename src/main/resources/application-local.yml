@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5440/trust_db}
+    username: ${DB_USERNAME:trust}
+    password: ${DB_PASSWORD:trust}
+  flyway:
+    baseline-on-migrate: true
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    username: ${RABBIT_USER:peaceapp}
+    password: ${RABBIT_PASSWORD:peaceapp}
+
+logging:
+  level:
+    pe.upc.peaceapp: DEBUG
